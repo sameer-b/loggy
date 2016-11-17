@@ -1,5 +1,6 @@
 language: node_js
 node_js:
     - 6
+before_install: npm install yarn --global
 install: npm install
-before_script: npm gulp build
+before_script: yarn gulp build
