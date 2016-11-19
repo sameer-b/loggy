@@ -9,5 +9,8 @@
         "presets": [
             "latest"
         ]
+    },
+    "dependencies": {
+        "gulp-eslint": "^3.0.1"
     }
 }
