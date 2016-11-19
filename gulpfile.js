@@ -1,10 +1,9 @@
-'use strict';
-
 const gulp = require('gulp');
 const babel = require('gulp-babel');
 const del = require('del');
 const exec = require('child_process').exec;
 const eslint = require('gulp-eslint');
+const mocha = require('gulp-mocha');
 
 const paths = {
     allSrcJs: 'src/**/*.js',
@@ -36,6 +35,16 @@ gulp.task('build', ['clean', 'lint'], () => {
     return gulp.src(paths.allSrcJs)
     .pipe(babel())
     .pipe(gulp.dest(paths.libDir));
+});
+
+gulp.task('test', function() {
+    return gulp.src(['test/test-*.js'], { read: false })
+    .pipe(mocha({
+        reporter: 'spec',
+        globals: {
+            should: require('should')
+        }
+    }));
 });
 
 gulp.task('main', ['build'], (callback) => {
