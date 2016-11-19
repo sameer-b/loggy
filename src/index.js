@@ -151,6 +151,7 @@ class Loggy {
 
     /**
      *
+     * LocalStorage manager
      * @returns {Object} Local storage manager
      */
     _localStoreManager() {
@@ -248,6 +249,7 @@ class Loggy {
     debug(msg, browserConsole) {
         this.handleNewLog(this.toLogObj(this.level.DEBUG, msg), browserConsole);
     }
+
     /**
      * Log a message
      * @memberOf Loggy
@@ -257,6 +259,7 @@ class Loggy {
     log(msg, browserConsole) {
         this.handleNewLog(this.toLogObj(this.level.LOG, msg), browserConsole);
     }
+
     /**
      * Log a information
      * @memberOf Loggy
@@ -266,6 +269,7 @@ class Loggy {
     info(msg, browserConsole) {
         this.handleNewLog(this.toLogObj(this.level.INFO, msg), browserConsole);
     }
+
     /**
      * Log a warning
      * @memberOf Loggy
@@ -285,6 +289,7 @@ class Loggy {
     error(msg, browserConsole) {
         this.handleNewLog(this.toLogObj(this.level.ERROR, msg), browserConsole);
     }
+
     /**
      * Get the stored logs
      * @memberOf Loggy
