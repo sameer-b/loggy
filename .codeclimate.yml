@@ -5,7 +5,7 @@ engines:
   csslint:
     enabled: true
   duplication:
-  	enabled: false
+    enabled: false
 ratings:
   paths:
   - src/**
