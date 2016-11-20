@@ -4,25 +4,26 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/* global window */
+/* global localStorage */
 
 var Loggy = function () {
     function Loggy() {
         _classCallCheck(this, Loggy);
 
+        this.browserConsole = null;
         this.config = {
             storeLogServiceUrl: '',
-            alertLog: false,
             logReportFrequency: { limit: 1, timer: 0 },
             logSeverityLevel: 1,
             consoleLog: true,
-            clearAfterSend: true,
+            clearAfterSend: false,
             alertIfNoService: false,
-            lsLogging: true,
+            lsLogging: false,
             lsKey: 'Loggy'
         };
 
@@ -105,29 +106,28 @@ var Loggy = function () {
          * @private
          * @memberOf Loggy
          * @param {object} logObj - is the object which contains the log message, type,...
-         * @param {object} browserConsole - Original browser console
+         * @param {object} args - params
          */
 
     }, {
         key: 'consoleLogging',
-        value: function consoleLogging(logObj, browserConsole) {
-            if (browserConsole && this.config.consoleLog) {
-                var logMsg = this.logToString(logObj);
+        value: function consoleLogging(logObj, args) {
+            if (this.config.consoleLog) {
                 switch (logObj.logSeverityLevel) {
                     case this.level.DEBUG:
-                        browserConsole.debug(logMsg);
+                        this.browserConsole.debug(args);
                         break;
                     case this.level.LOG:
-                        browserConsole.log(logMsg);
+                        this.browserConsole.log(args);
                         break;
                     case this.level.INFO:
-                        browserConsole.info(logMsg);
+                        this.browserConsole.info(args);
                         break;
                     case this.level.WARN:
-                        browserConsole.warn(logMsg);
+                        this.browserConsole.warn(args);
                         break;
                     case this.level.ERROR:
-                        browserConsole.error(logMsg);
+                        this.browserConsole.error(args);
                         break;
                     default:
                         break;
@@ -175,6 +175,7 @@ var Loggy = function () {
 
         /**
          *
+         * LocalStorage manager
          * @returns {Object} Local storage manager
          */
 
@@ -189,19 +190,16 @@ var Loggy = function () {
                         if (!Array.isArray(logs)) {
                             logs = [logs];
                         }
-                        /* global localStorage */
                         localStorage.setItem(this.lsKey, JSON.stringify(logs));
                     }
                 },
                 getLogs: function getLogs() {
                     if (this.isLocalStorageSupported) {
-                        /* global localStorage */
                         return JSON.parse(localStorage.getItem(this.lsKey));
                     }
                 },
                 clearLogs: function clearLogs() {
                     if (this.isLocalStorageSupported) {
-                        /* global localStorage */
                         localStorage.removeItem(this.lsKey);
                     }
                 }
@@ -236,20 +234,13 @@ var Loggy = function () {
         key: 'toLogObj',
         value: function toLogObj(logLevel, msg) {
             var logObj = {
-                timestamp: this.getTimeStamp()
+                logSeverityLevel: logLevel,
+                logs: []
             };
-            if ((typeof msg === 'undefined' ? 'undefined' : _typeof(msg)) === 'object' && msg.message) {
-                logObj.msg = msg.message;
-                logObj.stack = msg.stack;
-                logObj.logSeverityLevel = this.level.ERROR;
-            } else if (typeof msg === 'string') {
-                logObj.msg = msg;
-                logObj.stack = '';
-                logObj.logSeverityLevel = logLevel;
-            } else {
-                logObj.msg = JSON.stringify(msg);
-                logObj.stack = '';
-                logObj.logSeverityLevel = logLevel;
+            for (var i = 0; i < msg.length; i++) {
+                logObj.logs.push({
+                    msg: msg[i]
+                });
             }
             return logObj;
         }
@@ -259,15 +250,15 @@ var Loggy = function () {
          * @private
          * @memberOf Loggy
          * @param {object} logObj - is the log object to dispatch
-         * @param {object} browserConsole - Original browser console
+         * @param {object} msg - Original browser console
          */
 
     }, {
         key: 'handleNewLog',
-        value: function handleNewLog(logObj, browserConsole) {
+        value: function handleNewLog(logObj, msg) {
             if (logObj.logSeverityLevel >= this.config.logSeverityLevel) {
-                this.consoleLogging(logObj, browserConsole);
-                this._logs.push(logObj);
+                this.consoleLogging(logObj, msg);
+                this._logs = this._logs.concat(logObj);
 
                 if (this.config.lsLogging) {
                     this._localStoreManager().storeLogs(logObj);
@@ -278,64 +269,63 @@ var Loggy = function () {
         /**
          * Log a debug trace
          * @memberOf Loggy
-         * @param {String} msg - is the message to log
-         * @param {object} browserConsole - Original browser console
+         * @param {String} args - is the message to log
          */
 
     }, {
         key: 'debug',
-        value: function debug(msg, browserConsole) {
-            this.handleNewLog(this.toLogObj(this.level.DEBUG, msg), browserConsole);
+        value: function debug(args) {
+            this.handleNewLog(this.toLogObj(this.level.DEBUG, args), args);
         }
+
         /**
          * Log a message
          * @memberOf Loggy
-         * @param {String} msg - is the message to log
-         * @param {object} browserConsole - Original browser console
+         * @param {String} args - is the message to log
          */
 
     }, {
         key: 'log',
-        value: function log(msg, browserConsole) {
-            this.handleNewLog(this.toLogObj(this.level.LOG, msg), browserConsole);
+        value: function log(args) {
+            this.handleNewLog(this.toLogObj(this.level.LOG, args), args);
         }
+
         /**
          * Log a information
          * @memberOf Loggy
-         * @param {String} msg - is the message to log
-         * @param {object} browserConsole - Original browser console
+         * @param {String} args - is the message to log
          */
 
     }, {
         key: 'info',
-        value: function info(msg, browserConsole) {
-            this.handleNewLog(this.toLogObj(this.level.INFO, msg), browserConsole);
+        value: function info(args) {
+            this.handleNewLog(this.toLogObj(this.level.INFO, args), args);
         }
+
         /**
          * Log a warning
          * @memberOf Loggy
-         * @param {String} msg - is the message to log
-         * @param {object} browserConsole - Original browser console
+         * @param {String} args - is the message to log
          */
 
     }, {
         key: 'warn',
-        value: function warn(msg, browserConsole) {
-            this.handleNewLog(this.toLogObj(this.level.WARN, msg), browserConsole);
+        value: function warn(args) {
+            this.handleNewLog(this.toLogObj(this.level.WARN, args), args);
         }
 
         /**
          * Log a error
          * @memberOf Loggy
-         * @param {String|Object} msg - is the message to log or the exception object
-         * @param {object} browserConsole - Original browser console
+         * @param {String|Object} args - is the message to log or the exception object
          */
 
     }, {
         key: 'error',
-        value: function error(msg, browserConsole) {
-            this.handleNewLog(this.toLogObj(this.level.ERROR, msg), browserConsole);
+        value: function error(args) {
+            this.handleNewLog(this.toLogObj(this.level.ERROR, args), args);
         }
+
         /**
          * Get the stored logs
          * @memberOf Loggy
@@ -351,46 +341,40 @@ var Loggy = function () {
     }, {
         key: 'init',
         value: function init() {
-            /* global window */
-            if (window.console && console.log) {
-                (function () {
-                    var browserConsole = Object.assign({}, console);
-                    console.log = function () {
-                        this.log(arguments, browserConsole);
-                    };
-                })();
+            this.browserConsole = Object.assign({}, window.console);
+
+            if (window && window.console && window.console.log) {
+                window.console.log = function () {
+                    this.log(arguments);
+                }.bind(this);
             }
 
-            if (window.console && console.info) {
-                (function () {
-                    var browserConsole = Object.assign({}, console);
-                    console.info = function () {
-                        this.info(arguments, browserConsole);
-                    };
-                })();
+            if (window && window.console && window.console.info) {
+                window.console.info = function () {
+                    this.info(arguments);
+                }.bind(this);
             }
 
-            if (window.console && console.warn) {
-                (function () {
-                    var browserConsole = Object.assign({}, console);
-                    console.warn = function () {
-                        this.warn(arguments, browserConsole);
-                    };
-                })();
+            if (window && window.console && window.console.warn) {
+                window.console.warn = function () {
+                    this.warn(arguments);
+                }.bind(this);
             }
 
-            if (window.console && console.error) {
-                (function () {
-                    var browserConsole = Object.assign({}, console);
-                    console.error = function () {
-                        this.error(arguments, browserConsole);
-                    };
-                })();
+            if (window && window.console && window.console.error) {
+                window.console.error = function () {
+                    this.error(arguments);
+                }.bind(this);
             }
+        }
+    }, {
+        key: 'restore',
+        value: function restore() {
+            window.console = Object.assign({}, this.browserConsole);
         }
     }]);
 
     return Loggy;
 }();
 
-exports.default = Loggy;
+exports.Loggy = Loggy;
