@@ -1,4 +1,4 @@
-import {Loggy} from '../src/index';
+import {Loggy} from '../dist/index';
 import {assert} from 'chai';
 import sinon from 'sinon';
 
