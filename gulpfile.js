@@ -5,6 +5,8 @@ const exec = require('child_process').exec;
 const eslint = require('gulp-eslint');
 const mocha = require('gulp-mocha');
 const babelRegister = require('babel-register');
+const istanbul = require('gulp-istanbul');
+
 const paths = {
     allSrcJs: 'src/**/*.js',
     libDir: 'dist'
@@ -27,7 +29,7 @@ gulp.task('babel', () => {
     .pipe(gulp.dest(paths.libDir));
 });
 
-gulp.task('test', function() {
+gulp.task('test', ['pre-test'], function() {
     return gulp.src(['test/test-*.js'], { read: false })
     .pipe(mocha({
         reporter: 'spec',
@@ -37,7 +39,15 @@ gulp.task('test', function() {
         globals: {
             should: require('should')
         }
-    }));
+    }))
+    .pipe(istanbul.writeReports())
+    .pipe(istanbul.enforceThresholds({ thresholds: { global: 90 } }));
+});
+
+gulp.task('pre-test', function() {
+    return gulp.src(['dist/*.js'])
+    .pipe(istanbul())
+    .pipe(istanbul.hookRequire());
 });
 
 gulp.task('main', ['build'], (callback) => {
