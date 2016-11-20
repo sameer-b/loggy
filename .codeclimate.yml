@@ -1,0 +1,15 @@
+engines:
+  eslint:
+    enabled: true
+    channel: "eslint-3"
+  csslint:
+    enabled: true
+  duplication:
+  	enabled: false
+ratings:
+  paths:
+  - src/**
+  - test/**
+exclude_paths:
+- coverage/**
+- dist/**
