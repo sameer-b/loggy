@@ -1,76 +1,61 @@
-'use strict';
+/* global window */
+/* global localStorage */
 
-/**
- * Loggy is a simple JavaScript Logger that can store logs and send them to a webservice
- *
- * @class
- * @author Loggy
- * @example to use Loggy object, simply call the method from the object and optionnaly set your custom configuration :
- * Loggy.log('hello world');
- */
-const Loggy = (function() {
-    const _self = {};
-    /**
-     * Loggy version
-     * @type {string}
-     */
-    _self.version = '0.1.0';
+class Loggy {
 
-    /**
-     * Is the default configuration object
-     * @type {object}
-     */
-    const config = {
-        storeLogServiceUrl: '',
-        alertLog: false,
-        logReportFrequency: {limit: 1, timer: 0},
-        logSeverityLevel: 1,
-        consoleLog: true,
-        clearAfterSend: true,
-        alertIfNoService: false,
-        lsLogging: true,
-        lsKey: 'Loggy'
-    };
+    constructor() {
+        this.browserConsole = null;
+        this.config = {
+            storeLogServiceUrl: '',
+            logReportFrequency: {limit: 1, timer: 0},
+            logSeverityLevel: 1,
+            consoleLog: true,
+            clearAfterSend: false,
+            alertIfNoService: false,
+            lsLogging: false,
+            lsKey: 'Loggy'
+        };
 
-    /**
-     * The array of logged objects
-     * @private
-     */
-    let _logs = [];
+        /**
+         * The array of logged objects
+         * @private
+         */
+        this._logs = [];
 
-    /**
-     * Is the log level used for the configuration
-     * @type {object}
-     * @property {number} DEBUG - Constant to define a type of log used for debugging purposes
-     * @property {number} LOG - Constant to define a type of log as a simple log
-     * @property {number} INFO - Constant to define a ytpe of log as an info log
-     * @property {number} WARN - Constant to define a type of log as a warning log
-     * @property {number} ERROR - Constant to define a type of log as an error log
-     * @property {number} OFF - Constant to define the 'no-log' level
-     */
-    _self.level = {
-        DEBUG: 5,
-        LOG: 4,
-        INFO: 3,
-        WARN: 2,
-        ERROR: 1,
-        OFF: 0
-    };
+        /**
+         * Is the log level used for the configuration
+         * @type {object}
+         * @property {number} DEBUG - Constant to define a type of log used for debugging purposes
+         * @property {number} LOG - Constant to define a type of log as a simple log
+         * @property {number} INFO - Constant to define a ytpe of log as an info log
+         * @property {number} WARN - Constant to define a type of log as a warning log
+         * @property {number} ERROR - Constant to define a type of log as an error log
+         * @property {number} OFF - Constant to define the 'no-log' level
+         */
+        this.level = {
+            DEBUG: 5,
+            LOG: 4,
+            INFO: 3,
+            WARN: 2,
+            ERROR: 1,
+            OFF: 0
+        };
+    }
 
     /**
      * Set a custom logger config
      * @memberOf Loggy
      * @param {object} customConfig - is the custom config object
      */
-    _self.setConfig = function(customConfig) {
+    setConfig(customConfig) {
         if (customConfig) {
             for (const prop in customConfig) {
-                if (customConfig.hasOwnProperty(prop) && config.hasOwnProperty(prop)) {
-                    config[prop] = customConfig[prop];
+                if (customConfig.hasOwnProperty(prop) && this.config.hasOwnProperty(prop)) {
+                    this.config[prop] = customConfig[prop];
                 }
             }
         }
-    };
+    }
 
     /**
      * This function generate a user readable timestamp
@@ -78,7 +63,7 @@ const Loggy = (function() {
      * @memberOf Loggy
      * @returns {String} - is the stringified timestamp
      */
-    function getTimeStamp() {
+    getTimeStamp() {
         const currentdate = new Date();
         return currentdate.getFullYear()
             + '-' + (currentdate.getMonth() + 1)
@@ -96,7 +81,7 @@ const Loggy = (function() {
      * @param {Object} logObj - is the log object
      * @returns {String} - is the stringified logObj
      */
-    function logToString(logObj) {
+    logToString(logObj) {
         return logObj.msg;
     }
 
@@ -106,26 +91,25 @@ const Loggy = (function() {
      * @private
      * @memberOf Loggy
      * @param {object} logObj - is the object which contains the log message, type,...
-     * @param {object} browserConsole - Original browser console
+     * @param {object} args - params
      */
-    function consoleLogging(logObj, browserConsole) {
-        if (console && config.consoleLog) {
-            const logMsg = logToString(logObj);
+    consoleLogging(logObj, args) {
+        if (this.config.consoleLog) {
             switch (logObj.logSeverityLevel) {
-            case _self.level.DEBUG:
-                browserConsole.debug(logMsg);
+            case this.level.DEBUG:
+                this.browserConsole.debug(args);
                 break;
-            case _self.level.LOG:
-                browserConsole.log(logMsg);
+            case this.level.LOG:
+                this.browserConsole.log(args);
                 break;
-            case _self.level.INFO:
-                browserConsole.info(logMsg);
+            case this.level.INFO:
+                this.browserConsole.info(args);
                 break;
-            case _self.level.WARN:
-                browserConsole.warn(logMsg);
+            case this.level.WARN:
+                this.browserConsole.warn(args);
                 break;
-            case _self.level.ERROR:
-                browserConsole.error(logMsg);
+            case this.level.ERROR:
+                this.browserConsole.error(args);
                 break;
             default:
                 break;
@@ -134,41 +118,12 @@ const Loggy = (function() {
     }
 
     /**
-     * LocalStore Manager to store the logs locally
-     */
-    const _localStoreManager = {
-        isLocalStorageSupported: !!window.localStorage,
-        lsKey: config.lsKey,
-        storeLogs: function(logs) {
-            if (_self.isLocalStorageSupported) {
-                if (!Array.isArray(logs)) {
-                    logs = [logs];
-                }
-                /* global localStorage */
-                localStorage.setItem(_self.lsKey, JSON.stringify(logs));
-            }
-        },
-        getLogs: function() {
-            if (_self.isLocalStorageSupported) {
-                /* global localStorage */
-                return JSON.parse(localStorage.getItem(_self.lsKey));
-            }
-        },
-        clearLogs: function() {
-            if (_self.isLocalStorageSupported) {
-                /* global localStorage */
-                localStorage.removeItem(_self.lsKey);
-            }
-        }
-    };
-
-    /**
      * The httpRequestManager is a simple interface to send the log to the server.
      * @param {String} hostUrl - is the url to the service that will store the logs
      * @param {object} successCallback - is the callback function to call on success
      * @param {object} errorCallback - is the callback function to call on error
      */
-    function _logCommunicator(hostUrl, successCallback, errorCallback) {
+    _logCommunicator(hostUrl, successCallback, errorCallback) {
         /* global XMLHttpRequest */
         const http = new XMLHttpRequest();
         http.open('POST', hostUrl, true);
@@ -183,30 +138,60 @@ const Loggy = (function() {
                 }
             }
         };
-        http.send(JSON.stringify(_logs));
+        http.send(JSON.stringify(this._logs));
     }
 
-    _self.sendLogToWS = function() {
+    sendLogToWS() {
         function successCallback() {
-            if (config.clearAfterSend) {
-                _self.clear();
-                _localStoreManager.clearLogs();
+            if (this.config.clearAfterSend) {
+                this.clear();
+                this._localStoreManager().clearLogs();
             }
         }
-        _logCommunicator(config.storeLogServiceUrl,successCallback);
-    };
+        this._logCommunicator(this.config.storeLogServiceUrl,successCallback);
+    }
+
+    /**
+     *
+     * LocalStorage manager
+     * @returns {Object} Local storage manager
+     */
+    _localStoreManager() {
+        return {
+            isLocalStorageSupported: !!window.localStorage,
+            lsKey: this.config.lsKey,
+            storeLogs: function(logs) {
+                if (this.isLocalStorageSupported) {
+                    if (!Array.isArray(logs)) {
+                        logs = [logs];
+                    }
+                    localStorage.setItem(this.lsKey, JSON.stringify(logs));
+                }
+            },
+            getLogs: function() {
+                if (this.isLocalStorageSupported) {
+                    return JSON.parse(localStorage.getItem(this.lsKey));
+                }
+            },
+            clearLogs: function() {
+                if (this.isLocalStorageSupported) {
+                    localStorage.removeItem(this.lsKey);
+                }
+            }
+        };
+    }
 
     /**
      * This function clears the logs array in memory
      * @param {number} [limit] - is the limit of records to delete starting at the first element. Should be a number from 1 to Infinity. If not setted, full log array is cleared
      */
-    _self.clear = function(limit) {
+    clear(limit) {
         if (typeof limit === 'number') {
-            _logs.splice(0, limit - 1);
+            this._logs.splice(0, limit - 1);
         } else {
-            _logs = [];
+            this._logs = [];
         }
-    };
+    }
 
     /**
      * Generate a log object from a passed log
@@ -216,22 +201,15 @@ const Loggy = (function() {
      * @param {string} msg - is the message of the log
      * @returns {object} is the log object constructed
      */
-    function toLogObj(logLevel, msg) {
+    toLogObj(logLevel, msg) {
         const logObj = {
-            timestamp: getTimeStamp()
+            logSeverityLevel: logLevel,
+            logs: []
         };
-        if (typeof msg === 'object' && msg.message) {
-            logObj.msg = msg.message;
-            logObj.stack = msg.stack;
-            logObj.logSeverityLevel = _self.level.ERROR;
-        } else if (typeof msg === 'string') {
-            logObj.msg = msg;
-            logObj.stack = '';
-            logObj.logSeverityLevel = logLevel;
-        } else {
-            logObj.msg = JSON.stringify(msg);
-            logObj.stack = '';
-            logObj.logSeverityLevel = logLevel;
+        for (let i = 0; i < msg.length; i++) {
+            logObj.logs.push({
+                msg: msg[i]
+            });
         }
         return logObj;
     }
@@ -241,15 +219,15 @@ const Loggy = (function() {
      * @private
      * @memberOf Loggy
      * @param {object} logObj - is the log object to dispatch
-     * @param {object} browserConsole - Original browser console
+     * @param {object} msg - Original browser console
      */
-    function handleNewLog(logObj, browserConsole) {
-        if (logObj.logSeverityLevel >= config.logSeverityLevel) {
-            consoleLogging(logObj, browserConsole);
-            _logs.push(logObj);
+    handleNewLog(logObj, msg) {
+        if (logObj.logSeverityLevel >= this.config.logSeverityLevel) {
+            this.consoleLogging(logObj, msg);
+            this._logs = this._logs.concat(logObj);
 
-            if (config.lsLogging) {
-                _localStoreManager.storeLogs(logObj);
+            if (this.config.lsLogging) {
+                this._localStoreManager().storeLogs(logObj);
             }
         }
     }
@@ -257,93 +235,89 @@ const Loggy = (function() {
     /**
      * Log a debug trace
      * @memberOf Loggy
-     * @param {String} msg - is the message to log
-     * @param {object} browserConsole - Original browser console
+     * @param {String} args - is the message to log
      */
-    _self.debug = function(msg, browserConsole) {
-        handleNewLog(toLogObj(_self.level.DEBUG, msg), browserConsole);
-    };
+    debug(args) {
+        this.handleNewLog(this.toLogObj(this.level.DEBUG, args), args);
+    }
+
     /**
      * Log a message
      * @memberOf Loggy
-     * @param {String} msg - is the message to log
-     * @param {object} browserConsole - Original browser console
+     * @param {String} args - is the message to log
      */
-    _self.log = function(msg, browserConsole) {
-        handleNewLog(toLogObj(_self.level.LOG, msg), browserConsole);
-    };
+    log(args) {
+        this.handleNewLog(this.toLogObj(this.level.LOG, args), args);
+    }
+
     /**
      * Log a information
      * @memberOf Loggy
-     * @param {String} msg - is the message to log
-     * @param {object} browserConsole - Original browser console
+     * @param {String} args - is the message to log
      */
-    _self.info = function(msg, browserConsole) {
-        handleNewLog(toLogObj(_self.level.INFO, msg), browserConsole);
-    };
+    info(args) {
+        this.handleNewLog(this.toLogObj(this.level.INFO, args), args);
+    }
+
     /**
      * Log a warning
      * @memberOf Loggy
-     * @param {String} msg - is the message to log
-     * @param {object} browserConsole - Original browser console
+     * @param {String} args - is the message to log
      */
-    _self.warn = function(msg, browserConsole) {
-        handleNewLog(toLogObj(_self.level.WARN, msg), browserConsole);
-    };
+    warn(args) {
+        this.handleNewLog(this.toLogObj(this.level.WARN, args), args);
+    }
 
     /**
      * Log a error
      * @memberOf Loggy
-     * @param {String|Object} msg - is the message to log or the exception object
-     * @param {object} browserConsole - Original browser console
+     * @param {String|Object} args - is the message to log or the exception object
      */
-    _self.error = function(msg, browserConsole) {
-        handleNewLog(toLogObj(_self.level.ERROR, msg), browserConsole);
-    };
+    error(args) {
+        this.handleNewLog(this.toLogObj(this.level.ERROR, args), args);
+    }
+
     /**
      * Get the stored logs
      * @memberOf Loggy
      * @returns {Array} logs - are the logs
      * @returns {Object} logs[n] - is the log object
      */
-    _self.getLogs = function() {
-        return _logs;
-    };
+    getLogs() {
+        return this._logs;
+    }
 
-    _self.setConfig(config);
+    init() {
+        this.browserConsole = Object.assign({}, window.console);
 
-    _self.init = function() {
-        /* global window */
-        if (window.console && console.log) {
-            const browserConsole = Object.assign({}, console);
-            console.log = function() {
-                _self.log(arguments, browserConsole);
-            };
+        if (window && window.console && window.console.log) {
+            window.console.log = function() {
+                this.log(arguments);
+            }.bind(this);
         }
 
-        if (window.console && console.info) {
-            const browserConsole = Object.assign({}, console);
-            console.info = function() {
-                _self.info(arguments, browserConsole);
-            };
+        if (window && window.console && window.console.info) {
+            window.console.info = function() {
+                this.info(arguments);
+            }.bind(this);
         }
 
-        if (window.console && console.warn) {
-            const browserConsole = Object.assign({}, console);
-            console.warn = function() {
-                _self.warn(arguments, browserConsole);
-            };
+        if (window && window.console && window.console.warn) {
+            window.console.warn = function() {
+                this.warn(arguments);
+            }.bind(this);
         }
 
-        if (window.console && console.error) {
-            const browserConsole = Object.assign({}, console);
-            console.error = function() {
-                _self.error(arguments, browserConsole);
-            };
+        if (window && window.console && window.console.error) {
+            window.console.error = function() {
+                this.error(arguments);
+            }.bind(this);
         }
-    };
+    }
 
-    return _self;
-}());
+    restore() {
+        window.console = Object.assign({}, this.browserConsole);
+    }
+}
 
-Loggy.init();
+export {Loggy};
